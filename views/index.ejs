@@ -29,14 +29,14 @@
           </span>
         </div>
       </nav>
-      <form action="">
+      <form action="/upload" method="post" enctype="multipart/form-data">
         <div style="padding: 50px;" class="row">
             <div class="col-sm-6 mb-2">
               <div class="card">
                 <div class="card-body">
                     <div class="input-group mb-3">
                         <div class="custom-file">
-                          <input type="file" class="custom-file-input" id="inputGroupFile02">
+                          <input type="file" class="custom-file-input" id="file" name="file" required>
                           <label class="custom-file-label" for="inputGroupFile02">Choose file</label>
                         </div>
                         <div class="input-group-append">
@@ -52,7 +52,7 @@
                     <div class="form-inline">
                         <div class="form-group mx-sm-3 mb-2">
                           <label for="inputPassword2" class="sr-only">Password</label>
-                          <input type="password" class="form-control" id="inputPassword2" placeholder="Password">
+                          <input type="password" class="form-control" id="password" name="password" placeholder="Password">
                         </div>
                         <button type="submit" class="btn btn-primary mb-2">Share File</button>
                       </form>
