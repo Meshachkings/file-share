@@ -13,6 +13,7 @@ mongoose.connect(process.env.DATABASE_URL)
 const app = express();
 app.set('view engine', 'ejs');
 app.listen(process.env.PORT);
+app.use(express.urlencoded({ extended: true }))
 
 // file upload
 const upload = multer({
@@ -32,7 +33,7 @@ app.post('/upload', upload.single('file'), async  (req, res) => {
     if(password != null && password != "") {
         fileData.password = await bcrypt.hash(password, 10);
     }
-
+   
     const file = await File.create(fileData);
     
     res.render('index', {
@@ -40,15 +41,30 @@ app.post('/upload', upload.single('file'), async  (req, res) => {
     })
 })
 
-app.get("/file/:id", async (req, res) => {
+app.get("/file/:id", handleDownload)
+app.post("/file/:id", handleDownload)
+
+async function handleDownload(req, res) {
     const id = req.params.id;
 
     const file = await File.findById(id);
+
+    if(file.password != null ){
+        if(req.body.password == null ){
+            res.render('password');
+            return;
+        }
+
+        if( await bcrypt.compare(req.body.password, file.password)){
+            res.render('password', { error: true });
+            return;
+        }
+    }
 
     file.downloadCount++
     await file.save()
     console.log(file.downloadCount)
 
     res.download(file.path, file.originalName)
-})
+}
 
