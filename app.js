@@ -49,16 +49,24 @@ async function handleDownload(req, res) {
     if (!file) throw new Error("File does not exist");
 
     if (!file.password && req.body.password == null) {
-      return res.render("password");
+      file.downloadCount++;
+      await file.save();
+      return res.download(file.path, file.originalName);
+    }
+    if(file.password){
+      if(req.body.password == null){
+        res.render('password');
+      }
     }
 
-    if (file.password) {
-      const isValid = await bcrypt.compare(
-        req.body.password,
-        file.password.toString()
-      );
-      if (!isValid) return res.render("password", { error: true });
-      res.render("password");
+    // check if password is valid
+    if (!(await bcrypt.compare(req.body.password, file.password))) {
+      return res.render("password", { error: true });
+      
+        // const isValid = await bcrypt.compare(
+        // req.body.password,
+        // file.password
+
     }
 
     file.downloadCount++;
