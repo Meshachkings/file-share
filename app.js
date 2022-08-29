@@ -1,61 +1,72 @@
-require("dotenv").config()
-const multer = require("multer")
-const mongoose = require("mongoose")
-const bcrypt = require("bcrypt")
-const File = require("./models/File")
+require("dotenv").config();
+const multer = require("multer");
+const mongoose = require("mongoose");
+const bcrypt = require("bcrypt");
+const File = require("./models/File");
 
-const express = require("express")
-const app = express()
-app.use(express.urlencoded({ extended: true }))
+const express = require("express");
+const app = express();
+app.use(express.urlencoded({ extended: true }));
 
-const upload = multer({ dest: "uploads" })
+const upload = multer({ dest: "uploads" });
 
-mongoose.connect(process.env.DATABASE_URL)
+mongoose.connect(process.env.DATABASE_URL);
 
-app.set("view engine", "ejs")
+app.set("view engine", "ejs");
 
 app.get("/", (req, res) => {
-  res.render("index")
-})
+  return res.render("index");
+});
 
 app.post("/upload", upload.single("file"), async (req, res) => {
-  const fileData = {
-    path: req.file.path,
-    originalName: req.file.originalname,
+  console.log(req.file);
+  try {
+    const fileData = {
+      path: req.file.path,
+      originalName: req.file.originalname,
+    };
+    if (req.body.password != null && req.body.password !== "") {
+      fileData.password = await bcrypt.hash(req.body.password, 10);
+    }
+
+    const file = await File.create(fileData);
+
+    return res.render("index", {
+      fileLink: `${req.headers.origin}/file/${file.id}`,
+    });
+  } catch (err) {
+    return res.status(400).send(err.message ?? "An error occured");
   }
-  if (req.body.password != null && req.body.password !== "") {
-    fileData.password = await bcrypt.hash(req.body.password, 10)
-  }
+});
 
-  const file = await File.create(fileData)
-
-  res.render("index", { fileLink: `${req.headers.origin}/file/${file.id}` })
-})
-
-app.route("/file/:id").get(handleDownload).post(handleDownload)
+app.route("/file/:id").get(handleDownload).post(handleDownload);
 
 async function handleDownload(req, res) {
-  const file = await File.findById(req.params.id)
+  try {
+    if (!req.params.id) throw new Error("No id passed");
+    const file = await File.findById(req.params.id);
 
-  if (file.password != null) {
-    if (req.body.password == null) {
-      res.render("password")
-      return
+    if (!file) throw new Error("File does not exist");
+
+    if (!file.password && req.body.password == null) {
+      return res.render("password");
     }
 
-    if (!(await bcrypt.compare(req.body.password, file.password))) {
-      res.render("password", { error: true })
-      return
+    if (file.password) {
+      const isValid = await bcrypt.compare(
+        req.body.password,
+        file.password.toString()
+      );
+      if (!isValid) return res.render("password", { error: true });
+      res.render("password");
     }
+
+    file.downloadCount++;
+    await file.save();
+    return res.download(file.path, file.originalName);
+  } catch (err) {
+    return res.status(400).send(err.message ?? "An error occured");
   }
-  console.log(req.body.password)
-
-  file.downloadCount++
-  await file.save()
-  console.log(file.downloadCount)
-
-  res.download(file.path, file.originalName)
 }
 
-
-app.listen(process.env.PORT)
+app.listen(process.env.PORT);
